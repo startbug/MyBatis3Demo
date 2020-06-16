@@ -225,7 +225,7 @@ public interface UserDao {
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <!--namespace绑定一个对应的Dao/Mapper接口-->
-<mapper namespace="com.ggs.dao.UserDao">
+<mapper namespace="com.ggs.dao.com.ggs.dao.UserMapper">
     <!--select查询语句-->
     <select id="getAll" resultType="com.ggs.pojo.User">
         select * from user
@@ -235,7 +235,7 @@ public interface UserDao {
 
 ## 2.4、测试
 
-注意:org.apache.ibatis.binding.BindingException: Type interface com.ggs.dao.UserDao is not known to the MapperRegistry.
+注意:org.apache.ibatis.binding.BindingException: Type interface com.ggs.dao.com.ggs.dao.UserMapper is not known to the MapperRegistry.
 
 **MapperRegistry是什么?**
 
@@ -292,7 +292,7 @@ public void test1() {
 public void test1() {
     // 获取sqlSession对象
     SqlSession sqlSession = MybatisUtils.getSqlSession();
-    List<User> userList = sqlSession.selectList("com.ggs.dao.UserDao.getAll");
+    List<User> userList = sqlSession.selectList("com.ggs.dao.com.ggs.dao.UserMapper.getAll");
     System.out.println(userList);
     //关闭sqlSession
     sqlSession.close();
