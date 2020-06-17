@@ -816,7 +816,7 @@ getById查询结果
 
 # 6.日志
 
-6.1、日志工厂
+## 6.1、日志工厂
 
 如果一个数据库操作,出现了异常,我们需要拍错,就需要查看日志
 
@@ -844,17 +844,98 @@ getById查询结果
 </settings>
 ```
 
+--------
+
+## 6.2、Log4j
+
+什么是Log4j?
+
+- Log4j是[Apache](https://baike.baidu.com/item/Apache/8512995)的一个开源项目，通过使用Log4j，我们可以控制日志信息输送的目的地是[控制台](https://baike.baidu.com/item/控制台/2438626)、文件、[GUI](https://baike.baidu.com/item/GUI)组件
+- 我们也可以控制每一条日志的输出格式
+- 通过定义每一条日志信息的级别，我们能够更加细致地控制日志的生成过程
+- 通过一个[配置文件](https://baike.baidu.com/item/配置文件/286550)来灵活地进行配置，而不需要修改应用的代码。
 
 
 
+1.先导入log4j包
+
+```xml
+<dependency>
+    <groupId>log4j</groupId>
+    <artifactId>log4j</artifactId>
+    <version>1.2.17</version>
+</dependency>
+```
+
+2.log4j.properties
+
+```properties
+log4j.rootLogger = debug,stdout,file,error
+log4j.additivity.org.apache=true
+
+log4j.appender.stdout = org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Target = System.out
+log4j.appender.stdout.threshold = debug
+log4j.appender.stdout.layout = org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern = [%-5p] %d{yyyy-MM-dd HH:mm:ss,SSS} method:%l%n%m%n
+
+log4j.appender.file = org.apache.log4j.DailyRollingFileAppender
+log4j.appender.file.File = E:/ideaIU-2020.1/workspace/mybatis3/logs/log.log
+log4j.appender.file.Append = true
+log4j.appender.file.Threshold = DEBUG 
+log4j.appender.file.layout = org.apache.log4j.PatternLayout
+log4j.appender.file.DatePattern = '.'yyyy-MM-dd-HH-mm
+log4j.appender.file.layout.ConversionPattern = %-d{yyyy-MM-dd HH:mm:ss}  [ %t:%r ] - [ %p ]  %m%n
+
+log4j.appender.error = org.apache.log4j.DailyRollingFileAppender
+log4j.appender.error.File =E:/Eclipse2020.4/workspace/shop/logs/error.log 
+log4j.appender.error.Append = true
+log4j.appender.error.Threshold = debug 
+log4j.appender.error.layout = org.apache.log4j.PatternLayout
+log4j.appender.file.DatePattern = '.'yyyy-MM-dd-HH-mm
+log4j.appender.error.layout.ConversionPattern = %-d{yyyy-MM-dd HH:mm:ss}  [ %t:%r ] - [ %p ]  %m%n
+```
+
+3.配置log4j为日志实现
+
+```xml
+<settings>
+    <setting name="logImpl" value="LOG4J"/>
+</settings>
+```
+
+4.运行测试案例
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200617232419.png)
 
 
 
+**Log4j的简单实用**
 
+1.导入org.apache.log4j.Logger; 不要导错了
 
+2.日志对象, 参数为当前类的class
 
+```java
+static Logger logger = Logger.getLogger(UserDaoTest.class);
+```
 
+3.打印日志
 
+```java
+@Test
+public void testLog4j() {
+    logger.trace("trace级别日志");
+    logger.info("info级别日志");
+    logger.debug("debug级别日志");
+    logger.warn("warn级别日志");
+    logger.error("error级别日志");
+}
+```
+
+4.输出
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200617232318.png)
 
 
 
