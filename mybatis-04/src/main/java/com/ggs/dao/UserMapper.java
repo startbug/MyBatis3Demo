@@ -14,14 +14,11 @@ public interface UserMapper {
 
     User getById(int id);
 
-
-    int insertUser(User user);
-
-    int updateUser(User user);
-
-    int deleteUser(int id);
-
-    int updateUser2(Map<String,Object> map);
-
     List<User> getUserLike(String name);
+
+    //分页1
+    List<User> getUserByLimit(Map<String,Integer> map);
+
+    //分页2
+    List<User> getUserByRowBounds();
 }

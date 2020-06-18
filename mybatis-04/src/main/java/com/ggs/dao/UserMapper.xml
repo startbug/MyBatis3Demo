@@ -11,23 +11,22 @@
             select * from user where id=#{id}
     </select>
 
-    <insert id="insertUser" parameterType="User">
-            insert into user(id,name,pwd) values(#{id},#{name},#{pwd});
-        </insert>
-    <update id="updateUser" parameterType="com.ggs.pojo.User">
-            update mybatis.user set name=#{name},pwd=#{pwd} where id=#{id}
-        </update>
-    <update id="updateUser2" parameterType="map">
-            update user set name=#{xxx} where id=#{myid}
-        </update>
-    <delete id="deleteUser" parameterType="int">
-            delete from mybatis.user where id=#{id}
-        </delete>
     <select id="getAll" resultMap="UserMap">
         select * from user
     </select>
 
     <select id="getUserLike" resultType="com.ggs.pojo.User">
             select * from user where name like "%"#{name}"%"
-        </select>
+    </select>
+
+    <!--分页-->
+    <select id="getUserByLimit" parameterType="map" resultMap="UserMap">
+        select * from mybatis.user limit #{start},#{pageSize}
+    </select>
+
+    <!--分页2-->
+    <select id="getUserByRowBounds" resultMap="UserMap">
+        select * from  user;
+    </select>
+
 </mapper>

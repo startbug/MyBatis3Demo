@@ -2,6 +2,8 @@ package com.ggs.dao;
 
 import com.ggs.pojo.User;
 import com.ggs.utils.MyBatisUtils;
+import com.github.pagehelper.PageHelper;
+import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.log4j.Logger;
 import org.junit.Test;
@@ -50,26 +52,6 @@ public class UserDaoTest {
     }
 
     @Test
-    public void insertUserTest() {
-        SqlSession sqlSession = null;
-        try {
-            sqlSession = MyBatisUtils.getSqlSession();
-            UserMapper mapper = sqlSession.getMapper(UserMapper.class);
-            int count = mapper.insertUser(new User(10, "tom", "123456"));
-            System.out.println(count);
-            sqlSession.commit(); // 提交事务
-            if (count > 0) {
-                System.out.println("插入成功");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            sqlSession.close();
-        }
-    }
-
-
-    @Test
     public void getUserLike() {
         SqlSession sqlSession = MyBatisUtils.getSqlSession();
         try {
@@ -96,4 +78,35 @@ public class UserDaoTest {
         logger.error("error级别日志");
     }
 
+
+    @Test
+    public void getUserByLimit() {
+        SqlSession sqlSession = MyBatisUtils.getSqlSession();
+        UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        Map<String, Integer> map = new HashMap<>();
+        map.put("start", 0);
+        map.put("pageSize", 2);
+        List<User> userByLimit = mapper.getUserByLimit(map);
+        userByLimit.forEach(System.out::println);
+    }
+
+    @Test
+    public void getUserByRowBoundsTest() {
+        SqlSession sqlSession = MyBatisUtils.getSqlSession();
+        RowBounds rowBounds = new RowBounds(3, 3);
+        //通过java代码层面进行分页
+        List<User> userList = sqlSession.selectList("com.ggs.dao.UserMapper.getUserByRowBounds", null, rowBounds);
+        userList.forEach(System.out::println);
+    }
+
+    @Test
+    public void pageHelperTest(){
+        SqlSession sqlSession = MyBatisUtils.getSqlSession();
+        //开启分页查询,参数一: pageNum(从第几条开始查询),pageSize(查询多少条)
+        PageHelper.startPage(2,2);
+        UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        List<User> all = mapper.getAll();
+//        List<User> all = sqlSession.selectList("com.ggs.dao.UserMapper.getAll", null, new RowBounds(0, 3));
+        all.forEach(System.out::println);
+    }
 }

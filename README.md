@@ -920,6 +920,8 @@ log4j.appender.error.layout.ConversionPattern = %-d{yyyy-MM-dd HH:mm:ss}  [ %t:%
 static Logger logger = Logger.getLogger(UserDaoTest.class);
 ```
 
+
+
 3.打印日志
 
 ```java
@@ -937,9 +939,109 @@ public void testLog4j() {
 
 ![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200617232318.png)
 
+----
 
 
 
+# 7.分页
+
+**好处: 减少数据量**
+
+## **7.1、使用Limit分页**
+
+```xml
+<!--分页-->
+<select id="getUserByLimit" parameterType="map" resultMap="UserMap">
+    select * from mybatis.user limit #{start},#{pageSize}
+</select>
+```
+
+
+
+## 7.2、RowBounds分页
+
+在java代码层面进行分页
+
+1.接口
+
+```java
+List<User> getUserByRowBounds();
+```
+
+2.mapper.xml
+
+```xml
+<select id="getUserByRowBounds" resultMap="UserMap">
+    select * from  user;
+</select>
+```
+
+3.测试用例
+
+```java
+@Test
+public void getUserByRowBoundsTest() {
+    SqlSession sqlSession = MyBatisUtils.getSqlSession();
+    RowBounds rowBounds = new RowBounds(3, 3);
+    //通过java代码层面进行分页
+    List<User> userList = sqlSession.selectList("com.ggs.dao.UserMapper.getUserByRowBounds", null, rowBounds);
+    userList.forEach(System.out::println);
+}
+```
+
+
+
+## 7.3、分页插件
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200618233346.png)
+
+1.导入jar包
+
+```xml
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>5.1.11</version>
+</dependency>
+```
+
+2.接口
+
+```java
+List<User> getAll();
+```
+
+3.mapper.xml
+
+```xml
+<select id="getAll" resultMap="UserMap">
+    select * from user
+</select>
+```
+
+4.测试用例, 只需要指定PageHelper之后, 分页操作就自动完成了,我们只需要写业务代码即可
+
+```java
+@Test
+public void pageHelperTest(){
+    SqlSession sqlSession = MyBatisUtils.getSqlSession();
+//开启分页查询,参数一: pageNum(从第几条开始查询),pageSize(查询多少条)
+    PageHelper.startPage(2,2);
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    List<User> all = mapper.getAll();
+    all.forEach(System.out::println);
+}
+```
+
+5.结果
+
+数据库中的数据
+
+![image-20200618234146751](C:%5CUsers%5CStarbug%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20200618234146751.png)
+
+分页查询出的数据
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200618234234.png)
 
 
 
