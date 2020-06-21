@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ggs.dao.TeacherMapper">
+    <select id="getTeachers" resultMap="TeacherResultMap">
+        SELECT
+            s.id sid,
+            s.NAME sname,
+            t.id tid,
+            t.NAME tname
+        FROM
+            teacher t
+            LEFT JOIN student s  ON s.tid = t.id
+    </select>
+    <resultMap id="TeacherResultMap" type="Teacher">
+        <result property="id" column="tid" />
+        <result property="name" column="tname"/>
+        <collection property="students" ofType="Student" >
+            <result property="id" column="sid"/>
+            <result property="name" column="sname"/>
+            <result property="tid" column="id"/>
+        </collection>
+    </resultMap>
+
+    <!--================================================================-->
+    <select id="getTeachers2" resultMap="TeacherResultMap2">
+        select t.id,t.name from teacher t
+    </select>
+    <resultMap id="TeacherResultMap2" type="Teacher">
+        <result property="id" column="id"/>
+        <result property="name" column="name"/>
+        <collection property="students" ofType="Student" select="getStudents" column="id" ></collection>
+    </resultMap>
+
+    <select id="getStudents" resultType="Student">
+        select * from student s where tid=#{tid}
+    </select>
+</mapper>

@@ -1037,7 +1037,7 @@ public void pageHelperTest(){
 
 数据库中的数据
 
-![image-20200618234146751](C:%5CUsers%5CStarbug%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20200618234146751.png)
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200618234643.png)
 
 分页查询出的数据
 
@@ -1045,15 +1045,445 @@ public void pageHelperTest(){
 
 
 
+--------
+
+# 8、注解开发
+
+## CRUD操作
+
+8.1注解开发
+
+1.注解在接口上实现
+
+```java
+@Select("select * from user")
+List<User> getUsers();
+```
+
+2.在核心配置文件中绑定接口
+
+```xml
+<!--绑定接口-->
+<mappers>
+    <mapper class="com.ggs.dao.UserMapper"/>
+</mappers>
+```
+
+3.测试
+
+```java
+/**
+     * sqlSession.getMapper(**.class)
+     * 最终通过jdk动态代理生成代理对象
+     * 可以在org.apache.ibatis.binding.MapperProxyFactory中的newInstance方法看到执行过程
+     */
+@Test
+public void test1(){
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    List<User> users = mapper.getUsers();
+    users.forEach(System.out::println);
+}
+```
+
+本质: 反射机制实现
+
+底层: 动态代理
 
 
 
+在工具类创建的时候设置自动提交事务
+
+```java
+public static SqlSession getSqlSession() {
+    return sqlSessionFactory.openSession(true);
+}
+```
 
 
 
+UserMapper.java
+
+```java
+@Insert("insert into user(id,name,pwd) values(#{id},#{name},#{pwd})")
+int insertUser(User user);
+
+@Update("update user set name=#{name},pwd=#{pwd} where id=#{id}")
+int updateUser(User user);
+
+@Delete("delete from user where id =#{id}")
+int deleteUser(int id);
+```
+
+测试用例
+
+```java
+@Test
+public void testInsertUser() {
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    mapper.insertUser(new User(5, "lucy", "4156135413"));
+}
+
+@Test
+public void testUpdateUser() {
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    mapper.updateUser(new User(5, "xxx", "skldfjklsdjf"));
+}
+
+@Test
+public void testDeleteUser() {
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+    mapper.deleteUser(5);
+}
+```
 
 
 
+**关于@Param(value="")注解**
+
+- 基本数据类型或Stirng类型, 需要加上
+- 引用类型不用加
+- 如果只有一个基本数据类型或者String类型,可以忽略,但建议加上
+- sql语句中的#{}引入的名字就是在@Param中指定的名字
 
 
 
+-------------------------
+
+
+
+# 9、多对一查询
+
+## 方式一:按照查询嵌套处理
+
+**1.创建两张表,一张老师表,一张学生表**
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200621195634.png)
+
+![image-20200621195858163](C:%5CUsers%5CStarbug%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20200621195858163.png)
+
+学生和老师是多对一的关系, 学生表tid为外键,指向老师表的id
+
+对应的JaveBean对象
+
+Teacher类
+
+```java
+@Data
+public class Teacher {
+    private int id;
+    private String name;
+}
+```
+
+Student类
+
+```java
+@Data
+public class Student {
+    private int id;
+    private String name;
+    //多对一,关联一个老师对象
+    private Teacher teacher;
+}
+```
+
+
+
+**2.编写mapper.xml文件**
+
+StudentResultMap是关键: 
+
+​	association标签,
+
+​	property: 指定Student类中的属性名
+
+​	column: 指定Student类对应的数据库表的字段名
+
+​	javaType: 指定该属性的类型,Teacher类型
+
+​	select: 指定select语句, 将该select语句的返回结果封装到teacher属性中
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ggs.dao.StudentMapper">
+    <!--方式一: 按照查询嵌套处理-->
+    <select id="getTeacher" resultType="Teacher">
+        select * from teacher where id=#{id}
+    </select>
+
+    <resultMap id="StudentResultMap" type="Student">
+        <result property="id" column="id"></result>
+        <result property="name" column="name"></result>
+        <!--复杂的属性,需要单独处理
+            对象: association
+            集合: collection-->
+        <association property="teacher" column="tid" javaType="Teacher" select="getTeacher"></association>
+    </resultMap>
+
+    <select id="getAllStudent" resultMap="StudentResultMap">
+        select * from student;
+    </select>
+</mapper>
+```
+
+**3.测试用例**
+
+```java
+@Test
+public void getAllStudentTest(){
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    List<Student> studentList = mapper.getAllStudent();
+    studentList.forEach(System.out::println);
+}
+```
+
+**4.结果**
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200621201733.png)
+
+-------------
+
+## 方式二:按照结果嵌套处理
+
+**1.mapper.xml配置文件**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ggs.dao.StudentMapper">
+    <!--方式二: 按照结果嵌套处理-->
+    <select id="getAllStudent2" resultMap="StudentResultMap2">
+        SELECT
+            s.id sid,
+            s.NAME sname,
+            s.tid tid,
+            t.NAME tname
+        FROM
+            student s
+            LEFT JOIN teacher t ON s.tid = t.id;
+    </select>
+
+    <resultMap id="StudentResultMap2" type="Student">
+        <result property="id" column="sid"/>
+        <result property="name" column="sname"/>
+        <association property="teacher" javaType="Teacher">
+            <result property="id" column="tid"/>
+            <result property="name" column="tname"/>
+        </association>
+    </resultMap>
+</mapper>
+```
+
+**2.测试用例**
+
+```java
+@Test
+public void getAllStudent2Test(){
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    StudentMapper mapper = sqlSession.getMapper(StudentMapper.class);
+    List<Student> studentList = mapper.getAllStudent2();
+    studentList.forEach(System.out::println);
+}
+```
+
+**3.结果**
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200621201733.png)
+
+
+
+多对一查询方式:
+
+- 子查询
+- 联表查询
+
+
+
+# 10、一对多查询
+
+**修改JavaBean对象的属性**
+
+Student类
+
+```java
+@Data
+public class Student {
+    private int id;
+    private String name;
+    //多对一,关联一个老师对象
+    private int tid;
+}
+```
+
+Teacher类
+
+```java
+@Data
+public class Teacher {
+    private int id;
+    private String name;
+    private List<Student> students;
+}
+```
+
+
+
+## 方式一:按照结果嵌套处理
+
+复杂属性:
+
+​	对象: association
+
+​	集合: collection
+
+​		javaType: 指定返回值类型
+
+​		ofType: 指定集合泛型
+
+mapper.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ggs.dao.TeacherMapper">
+    <select id="getTeachers" resultMap="TeacherResultMap">
+        SELECT
+            s.id sid,
+            s.NAME sname,
+            t.id tid,
+            t.NAME tname
+        FROM
+            teacher t
+            LEFT JOIN student s  ON s.tid = t.id
+    </select>
+    <resultMap id="TeacherResultMap" type="Teacher">
+        <result property="id" column="tid" />
+        <result property="name" column="tname"/>
+        <collection property="students" ofType="Student" >
+            <result property="id" column="sid"/>
+            <result property="name" column="sname"/>
+            <result property="tid" column="id"/>
+        </collection>
+    </resultMap>
+</mapper>
+```
+
+结果:
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200621214128.png)
+
+
+
+## 方式二:按照查询嵌套处理
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ggs.dao.TeacherMapper">
+    <select id="getTeachers2" resultMap="TeacherResultMap2">
+        select t.id,t.name from teacher t
+    </select>
+    <resultMap id="TeacherResultMap2" type="Teacher">
+        <result property="id" column="id"/>
+        <result property="name" column="name"/>
+        <collection property="students" javaType="java.util.List"  ofType="Student" select="getStudents" column="id" ></collection>
+    </resultMap>
+
+    <select id="getStudents" resultType="Student">
+        select * from student s where tid=#{tid}
+    </select>
+</mapper>
+```
+
+结果:
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200621215938.png)
+
+
+
+-----------------
+
+# 11、动态SQL
+
+**什么是动态SQL?**
+
+​	动态SQL就是根据不同的条件生成不同的SQL语句
+
+**官方文档:** 
+
+​	动态 SQL 是 MyBatis 的强大特性之一。如果你使用过 JDBC 或其它类似的框架，你应该能理解根据不同条件拼接 SQL 语句有多痛苦，例如拼接时要确保不能忘记添加必要的空格，还要注意去掉列表最后一个列名的逗号。利用动态 SQL，可以彻底摆脱这种痛苦。
+
+
+
+**搭建环境**
+
+```sql
+CREATE TABLE blog (
+	id VARCHAR ( 50 ) NOT NULL COMMENT '博客id',
+	title VARCHAR ( 100 ) NOT NULL COMMENT '博客标题',
+	author VARCHAR ( 30 ) NOT NULL COMMENT '博客作者',
+	create_time DATETIME NOT NULL COMMENT '创建时间',
+	views INT ( 30 ) NOT NULL COMMENT '浏览量' 
+) ENGINE = INNODB DEFAULT charset = utf8
+```
+
+Blog实体类
+
+```java
+@Data
+public class blog {
+    private String id;
+    private String title;
+    private String author;
+    private Date createTime;
+    private int views;
+}
+```
+
+
+
+## ①if标签
+
+mapper.xml
+
+```
+    <select id="queryBlogIf" parameterType="map" resultType="Blog">
+        select * from blog where 1=1
+        <if test="title != null">
+--             and title like '%${title}%'  
+--             and title like concat('%','${title}','%')
+            and title like concat('%',#{title},'%')
+        </if>
+        <if test="author != null">
+            and author = #{author}
+        </if>
+    </select>
+```
+
+-- 是表示注释的意思
+
+模糊查询有四种方式
+
+​	第一种: 在执行放入sql前,先将参数前后提前加上%号
+
+​	第二种: title like '%${title}%'  , ${}这种方式是拼接字符串, 会有sql注入风险
+
+​	第三种: title like concat('%','${title}','%') 借助sql函数,防止sql注入
+
+​	第四种: title like concat('%',#{title},'%') 借助sql函数,防止sql注入
+
+提示: ${} 和 #{}的区别, $符号字段, 放入sql语句中后,是没有''包裹的,而#{}的会自动添加'', 包裹住属性值
