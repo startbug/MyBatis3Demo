@@ -4,19 +4,72 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ggs.dao.BlogMapper">
 
+<sql id="if-title-author">
+    <if test="title != null">
+        and title like concat('%',#{title},'%')
+    </if>
+    <if test="author != null">
+        and author = #{author}
+    </if>
+</sql>
+
     <insert id="addBlog" parameterType="Blog">
         insert into blog(id,title,author,create_time,views) values(#{id},#{title},#{author},#{createTime},#{views})
     </insert>
 
+    <!--    <select id="queryBlogIf" parameterType="map" resultType="Blog">-->
+    <!--        select * from blog where 1=1-->
+    <!--        <if test="title != null">-->
+    <!--&#45;&#45;             and title like '%${title}%'-->
+    <!--&#45;&#45;             and title like concat('%','${title}','%')-->
+    <!--            and title like concat('%',#{title},'%')-->
+    <!--        </if>-->
+    <!--        <if test="author != null">-->
+    <!--            and author = #{author}-->
+    <!--        </if>-->
+    <!--    </select>-->
     <select id="queryBlogIf" parameterType="map" resultType="Blog">
-        select * from blog where 1=1
-        <if test="title != null">
---             and title like '%${title}%'
---             and title like concat('%','${title}','%')
-            and title like concat('%',#{title},'%')
-        </if>
-        <if test="author != null">
-            and author = #{author}
-        </if>
+        select * from blog
+        <where>
+            <include refid="if-title-author"></include>
+        </where>
     </select>
+    <select id="queryBlogChoose" parameterType="map" resultType="Blog">
+        select * from blog
+        <where>
+            <choose>
+                <when test="author != null">
+                    author = #{author}
+                </when>
+                <when test="title != null">
+                    title = #{title}
+                </when>
+                <otherwise>
+                    views = #{views}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+    <select id="queryBlogForeach" parameterType="map" resultType="com.ggs.pojo.Blog">
+        select * from blog
+        <where>
+            <foreach collection="ids" item="id" open="(" separator="or" close=")">
+                id = #{id}
+            </foreach>
+        </where>
+    </select>
+
+
+    <update id="updateBlog" parameterType="map" >
+        update blog
+        <set>
+            <if test="title != null">title=#{title},</if>
+            <if test="author != null">author=#{author},</if>
+            <if test="create_time != null">create_time=#{createTime},</if>
+            <if test="views != null">views=#{views},</if>
+        </set>
+        <where>
+            id=#{id}
+        </where>
+    </update>
 </mapper>

@@ -637,7 +637,7 @@ public class User {
 
 ![image-20200616122208995](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200616122214.png)
 
-![image-20200616122313664](C:%5CUsers%5CStarbug%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20200616122313664.png)
+![image-20200616122313664](E:%5CideaIU-2020.1%5Cworkspace%5Cmybatis3%5CREADME.assets%5Cimage-20200616122313664.png)
 
 
 
@@ -645,7 +645,7 @@ public class User {
 
 作用: 提高效率
 
-![image-20200616122439339](C:%5CUsers%5CStarbug%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20200616122439339.png)
+![image-20200616122439339](E:%5CideaIU-2020.1%5Cworkspace%5Cmybatis3%5CREADME.assets%5Cimage-20200616122439339.png)
 
 
 
@@ -1163,7 +1163,7 @@ public void testDeleteUser() {
 
 ![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200621195634.png)
 
-![image-20200621195858163](C:%5CUsers%5CStarbug%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20200621195858163.png)
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200625163626.png)
 
 学生和老师是多对一的关系, 学生表tid为外键,指向老师表的id
 
@@ -1206,6 +1206,8 @@ StudentResultMap是关键:
 ​	javaType: 指定该属性的类型,Teacher类型
 
 ​	select: 指定select语句, 将该select语句的返回结果封装到teacher属性中
+
+
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1487,3 +1489,396 @@ mapper.xml
 ​	第四种: title like concat('%',#{title},'%') 借助sql函数,防止sql注入
 
 提示: ${} 和 #{}的区别, $符号字段, 放入sql语句中后,是没有''包裹的,而#{}的会自动添加'', 包裹住属性值
+
+
+
+## ②where标签
+
+改写if标签中的查询语句
+
+```xml
+<select id="queryBlogIf" parameterType="map" resultType="Blog">
+    select * from blog
+    <where>
+        <if test="title != null">
+            and title like concat('%',#{title},'%')
+        </if>
+        <if test="author != null">
+            and author = #{author}
+        </if>
+    </where>
+</select>
+```
+
+where标签: 当where标签中的有一个或多个条件匹配的时候,会在sql语句上自动添加where关键字, 而且, where标签中的if标签, 会自动删除第一个条件前的and关键字
+
+例子:
+
+如果if标签都不满足,那么输入的sql语句为:
+
+```sql
+select * from blog 
+```
+
+如果满足一条或多条, 自动添加where,并且清除第一个and
+
+```sql
+select * from blog WHERE title like concat('%',?,'%') and author = ? 
+```
+
+**官方文档解释:**
+
+<font color=red>*where* 元素只会在子元素返回任何内容的情况下才插入 “WHERE” 子句。而且，若子句的开头为 “AND” 或 “OR”，*where* 元素也会将它们去除。</font>
+
+------------
+
+## ③where+choose+when
+
+官方文档:
+
+<font color=red>有时候，我们不想使用所有的条件，而只是想从多个条件中选择一个使用。针对这种情况，MyBatis 提供了 choose 元素，它有点像 Java 中的 switch 语句</font>
+
+choose标签中, 只会使用第一个成立条件的内容
+
+```xml
+<select id="queryBlogChoose" parameterType="map" resultType="Blog">
+    select * from blog
+    <where>
+        <choose>
+            <when test="author != null">
+                author = #{author}
+            </when>
+            <when test="title != null">
+                title = #{title}
+            </when>
+            <otherwise>
+                views = #{views}
+            </otherwise>
+        </choose>
+    </where>
+</select>
+```
+
+
+
+## ④set标签
+
+<font color=red>官方文档: 用于动态更新语句的类似解决方案叫做 *set*。*set* 元素可以用于动态包含需要更新的列，忽略其它不更新的列。set* 元素会动态地在行首插入 SET 关键字，并会删掉额外的逗号（这些逗号是在使用条件语句给列赋值时引入的）。</font>
+
+
+
+```xml
+<update id="updateBlog" parameterType="map" >
+    update blog
+    <set>
+        <if test="title != null">title=#{title},</if>
+        <if test="author != null">author=#{author},</if>
+        <if test="create_time != null">create_time=#{createTime},</if>
+        <if test="views != null">views=#{views},</if>
+    </set>
+    <where>
+        id=#{id}
+    </where>
+</update>
+```
+
+
+
+## ⑤SQL片段
+
+有的时候，我们可能会将一些功能的部分抽取出来,方便复用, 使用SQL标签抽取公共的部分
+
+**1.声明片段**
+
+```xml
+<sql id="if-title-author">
+    <if test="title != null">
+        and title like concat('%',#{title},'%')
+    </if>
+    <if test="author != null">
+        and author = #{author}
+    </if>
+</sql>
+```
+
+**2.引用SQL片段, 在合适的地方使用include标签进行引用**
+
+```xml
+<select id="queryBlogIf" parameterType="map" resultType="Blog">
+    select * from blog
+    <where>
+        <include refid="if-title-author"></include>
+    </where>
+</select>
+```
+
+
+
+注意事项:
+
+- 最好基于单表来定义SQL片段!
+- 不要存在where标签
+
+
+
+## ⑥foreach片段
+
+官方文档
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200625163259.png)
+
+案例
+
+mapper.xml
+
+```xml
+<select id="queryBlogForeach" parameterType="map" resultType="com.ggs.pojo.Blog">
+    select * from blog
+    <where>
+        <foreach collection="ids" item="id" open="(" separator="or" close=")">
+            id = #{id}
+        </foreach>
+    </where>
+</select>
+```
+
+测试案例
+
+```java
+@Test
+public void testQueryBlogForeach(){
+    SqlSession sqlSession = MybatisUtils.getSqlSession();
+    BlogMapper mapper = sqlSession.getMapper(BlogMapper.class);
+    Map<String, Object> map = new HashMap<>();
+    List ids=new ArrayList<>();
+    map.put("ids",ids);
+    ids.add("3114f6a3b0894fbaa592f69cf6e93c4c");
+    ids.add("50a43483f3f0446b8b6db375c939858d");
+    ids.add("5a783c8d94664f20a77cd49bef8c61bf");
+    List<Blog> blogs = mapper.queryBlogForeach(map);
+    blogs.forEach(System.out::println);
+}
+```
+
+-----------------------
+
+
+
+# 12、缓存
+
+## 12.1、什么是缓存[ Cache ]?
+
+- 存在内存中的临时数据。
+
+- 将用户经常查询的数据放在缓存(内存)中，用户去查询数据就不用从磁盘上(关系型数据库数据文件)查询，从缓存中查询,从而提高查询效率,解决了高并发系统的性能问题。
+
+2.为什么使用缓存?
+
+- 减少和数据库的交互次数,减少系统开销，提高系统效率。
+
+3.什么样的数据能使用缓存?
+
+- 经常查询并且不经常改变的数据。
+
+
+
+## 12.2、Mybatis缓存
+
+- MyBatis包含- 个非常强大的查询缓存特性， 它可以非常方便地定制和配置缓存。缓存可以极大的提升查询效率。
+
+- MyBatis系统中默认定义了两级缓存: **一级缓存**和**二级缓存**
+  - 默认情况下，只有- -级缓存开启。 (SqlSession级别的缓存， 也称为本地缓存)
+  - 二级缓存需要手动开启和配置，他是基于namespace级别的缓存.
+  - 为了提高扩展性，MyBatis定义了缓存接口Cache.我们可以通过实现Cache接口来自定义二级缓存
+
+
+
+## 12.3、一级缓存
+
+- ==一级缓存==也叫==本地缓存==:
+  - mybatis默认开启一级缓存
+  - 与数据库同一次会话期间查询到的数据会放在本地缓存中。
+  - 以后如果需要获取相同的数据，直接从缓存中拿，没必须再去查询数据库;
+
+
+
+测试步骤:
+
+①开启日志
+
+②测试在同一个Session中查询两次相同的记录
+
+③查看日志输出
+
+测试仪一: 两次查询相同的数据
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200625173729.png)
+
+测试二: 在两次两次相同的插叙之间, 进行一次修改
+
+在同一次会话中, 即使查询同一条数据, 如果中间出现增删改, 都会刷新缓存
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200625173706.png)
+
+
+
+缓存失效的情况, 官方文档:
+
+- 映射语句文件中的所有 select 语句的结果将会被缓存。
+- 映射语句文件中的所有 insert、update 和 delete 语句会刷新缓存。
+- 缓存会使用最近最少使用算法（LRU, Least Recently Used）算法来清除不需要的缓存。
+- 缓存不会定时进行刷新（也就是说，没有刷新间隔）。
+- 缓存会保存列表或对象（无论查询方法返回哪种）的 1024 个引用。
+- 缓存会被视为读/写缓存，这意味着获取到的对象并不是共享的，可以安全地被调用者修改，而不干扰其他调用者或线程所做的潜在修改。
+
+
+
+缓存失效的情况, 人话文档:
+
+1. 查询不同的数据
+2. 增删改查操作, 可能会改变原来数据, 所以必定会刷新缓存
+3. 查询不同的Mapper.xml
+4. 手动清理缓存
+
+```java
+sqlSession.clearCache();//手动清理缓存
+```
+
+
+
+小结: 一级缓存默认是开启的, 只有在一次SqlSession中有效, 也就是拿到连接到关闭连接的时间段之间
+
+
+
+## 12.4、二级缓存
+
+<font color=red>官方文档</font>
+
+​		MyBatis 内置了一个强大的事务性查询缓存机制，它可以非常方便地配置和定制。 为了使它更加强大而且易于配置，我们对 MyBatis 3 中的缓存实现进行了许多改进。
+
+​		默认情况下，只启用了本地的会话缓存，它仅仅对一个会话中的数据进行缓存。 要启用全局的二级缓存，只需要在你的 SQL 映射文件中添加一行：
+
+```xml
+<cache/>
+```
+
+​		缓存只作用于 cache 标签所在的映射文件中的语句。如果你混合使用 Java API 和 XML 映射文件，在共用接口中的语句将不会被默认缓存。你需要使用 @CacheNamespaceRef 注解指定缓存作用域。
+
+----------
+
+
+
+笔记: 
+
+- 二级缓存也叫全局缓存，一级缓存作用域太低了,所以诞生了二级缓存
+- 基于namespace级别的缓存，-个名称空间，对应一个二级缓存;
+- 工作机制
+  - 一个会话查询- -条数据，这个数据就会被放在当前会话的一-级缓存中;
+  - 如果当前会话关闭了，这个会话对应的一-级缓存就没了; 但是我们想要的是，会话关闭了，一级缓存中的数据被保存到二级缓存中;
+  - 新的会话查询信息，就可以从二级缓存中获取内容;
+  - 不同的mapper查出的数据会放在自己对应的缓存(map)中;
+
+
+
+测试步骤:
+
+①开启全局缓存, 这个配置默认就是true, 显式先出来提高阅读性(可选)
+
+```xml
+<!--显式的开启全局缓存-->
+<setting name="cacheEnabled" value="true"/>
+```
+
+②在Mapper.xml文件中添加缓存标签(==必须==)
+
+不添加参数, 使用默认配置
+
+```xml
+<!--在当前Mapper.xml中使用二级缓存-->
+<cache/>
+```
+
+
+
+自定义参数
+
+```xml
+<!--在当前Mapper.xml中使用二级缓存-->
+<cache eviction="FIFO"
+       flushInterval="60000"
+       size="512"
+       readOnly="true"/>
+```
+
+==eviction==: 清除策略, 默认使用LRU
+
+- `LRU` – 最近最少使用：移除最长时间不被使用的对象。
+- `FIFO` – 先进先出：按对象进入缓存的顺序来移除它们。
+- `SOFT` – 软引用：基于垃圾回收器状态和软引用规则移除对象。
+- `WEAK` – 弱引用：更积极地基于垃圾收集器状态和弱引用规则移除对象。
+
+==flushInterval==: 刷新间隔, 属性可以被设置为任意的正整数，设置的值应该是一个以毫秒为单位的合理时间量。 默认情况是不设置，也就是没有刷新间隔，缓存仅仅会在调用语句时刷新。
+
+==size==: 引用数目, 属性可以被设置为任意正整数，要注意欲缓存对象的大小和运行环境中可用的内存资源。默认值是 1024。
+
+
+
+==readOnly==: 只读, 属性可以被设置为 true 或 false。只读的缓存会给所有调用者返回缓存对象的相同实例。 因此这些对象不能被修改。这就提供了可观的性能提升。而可读写的缓存会（通过序列化）返回缓存对象的拷贝。 速度上会慢一些，但是更安全，因此默认值是 false。
+
+ 
+
+<font color=red>二级缓存是事务性的。这意味着，当 SqlSession 完成并提交时，或是完成并回滚，但没有执行 flushCache=true 的 insert/delete/update 语句时，缓存会获得更新。</font>
+
+
+
+测试用例
+
+```java
+@Test
+public void test2() {
+    //创建两个sqlSession,分别获取UserMapper
+    SqlSession sqlSession1 = MybatisUtils.getSqlSession();
+    UserMapper mapper1 = sqlSession1.getMapper(UserMapper.class);
+    SqlSession sqlSession2 = MybatisUtils.getSqlSession();
+    UserMapper mapper2 = sqlSession2.getMapper(UserMapper.class);
+
+    User user1 = mapper1.queryUserById(2);
+    System.out.println(user1);
+    sqlSession1.close(); //重点, 要关闭sqlSession1,否则数据值只保存在本地缓存中, 而不会保存到二级缓存中, 下面的的mapper2会再次去数据库查询
+
+    User user2 = mapper2.queryUserById(2);
+    System.out.println(user2);
+    sqlSession2.close();
+
+    System.out.println(user1 == user2);
+}
+```
+
+结果: 
+
+1. 在cache标签中设置readOnly为true, 两次查询的结果都是同一个对象, 比较后返回true
+
+2. 如果readOnly设置为false, 返回的则是一个新的对象, 并且该对象必须要实现序列化接口,否则报错
+
+   <font color=red>org.apache.ibatis.cache.CacheException: Error serializing object.  Cause: java.io.NotSerializableException: com.ggs.pojo.User</font>
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200625181029.png)
+
+
+
+小结:
+
+- 只要开启了二级缓存，在同一个Mapper下就有效I
+- 所有的数据都会先放在一级缓存中;
+- 只有当会话提交,或者关闭的时候，才会提交到二级缓存
+
+
+
+
+
+## 12.5、缓存原理
+
+![](https://gitee.com/starbug-gitee/PicBed/raw/master/img/20200625184348.png)
+
+
+
